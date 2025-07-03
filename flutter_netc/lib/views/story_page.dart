@@ -6,92 +6,96 @@ import 'package:netcfluttermvvm/widgets/app_bar.dart';
 import 'package:netcfluttermvvm/widgets/tablet_list_header.dart';
 import '../viewmodels/story_provider.dart';
 import 'story_detail_page.dart';
-import '../widgets/story_form.dart';
+import 'story_form.dart';
 import '../widgets/mobile_list_card.dart';
 import 'package:netcfluttermvvm/widgets/tablet_list_card.dart';
 import '../responsive/responsive_layout.dart';
 
-class StoryPage extends ConsumerWidget {
+class StoryPage extends ConsumerStatefulWidget {
   const StoryPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    // Watches the list of stories using Riverpod provider
+  ConsumerState<StoryPage> createState() => _StoryPageState();
+}
+
+class _StoryPageState extends ConsumerState<StoryPage> {
+  final ScrollController _scrollController = ScrollController();
+
+  void _scrollToTop() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          0,
+          duration: const Duration(milliseconds: 500),
+          curve: Curves.easeOut,
+        );
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final stories = ref.watch(storyProvider);
     final isTablet = MediaQuery.of(context).size.width >= 904;
 
     return Scaffold(
-      // Custom App Bar
       appBar: const CustomStyledAppBar(),
       backgroundColor: Colors.white,
-      // Body: Scrollable list of story cards
+
       body: ListView.builder(
+        controller: _scrollController, // ✅ attach controller
         padding: const EdgeInsets.all(8),
-        itemCount: stories.length + (isTablet ? 1 : 0), // Extra count for header
+        itemCount: stories.length + (isTablet ? 1 : 0),
         itemBuilder: (_, i) {
-          if (isTablet) {
-            if (i == 0) {
-              return const TabletListHeader();
-            }
+          if (isTablet && i == 0) return const TabletListHeader();
+          final index = isTablet ? i - 1 : i;
 
-            final index = i - 1;
+          if (index >= stories.length) return const SizedBox.shrink();
+          final story = stories[index];
 
-            // Safeguard in case stories is empty
-            if (index >= stories.length) {
-              return const SizedBox.shrink();
-            }
-
-            final story = stories[index];
-
-            return InkWell(
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => StoryDetailPage(storyId: story.id)),
-                );
-              },
-              // child:  MobileListCard(s),
-              child:  ResponsiveLayout(
-                mobileBody: MobileListCard(story),
-                tabletBody: TabletListCard(story),
-              ),
-            );
-          }
-          else {
-            final story = stories[i];
-
-            return InkWell(
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => StoryDetailPage(storyId: story.id)),
-                );
-              },
-              // child:  MobileListCard(s),
-              child:  ResponsiveLayout(
-                mobileBody: MobileListCard(story),
-                tabletBody: TabletListCard(story),
-              ),
-            );
-          }
+          return InkWell(
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => StoryDetailPage(
+                storyId: story.id, 
+                onUpdated: _scrollToTop, // ✅ pass scroll callback
+              )),
+            ),
+            child: ResponsiveLayout(
+              mobileBody: MobileListCard(story),
+              tabletBody: TabletListCard(story),
+            ),
+          );
         },
       ),
 
-      // Floating Action Button to create a new story
       floatingActionButton: FloatingActionButton(
         onPressed: () => showDialog(
           context: context,
-          builder: (_) => const StoryFormDialog(), // Open story form dialog
+          builder: (_) => StoryFormDialog(
+            onSave: (callback) async {
+              showDialog(
+                context: context,
+                barrierDismissible: false,
+                builder: (_) => const Center(child: CircularProgressIndicator()),
+              );
+              await callback();
+              if (context.mounted) Navigator.of(context).pop(); // close loading
+              _scrollToTop(); // ✅ scroll to top
+            },
+          ),
         ),
         backgroundColor: Colors.black,
         child: const Icon(Icons.add, color: Colors.white),
       ),
+
+
     );
   }
 }
-
-// Helper function to limit a string to a certain number of characters, adding "..." if truncated
-// String limitWords(String text, int maxChars) {
-//   if (text.length <= maxChars) return text;
-//   return text.substring(0, maxChars) + '...';
-// }

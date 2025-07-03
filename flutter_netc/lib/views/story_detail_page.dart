@@ -10,11 +10,12 @@ import 'package:netcfluttermvvm/viewmodels/story_provider.dart';
 import 'package:netcfluttermvvm/widgets/build_tag.dart';
 import 'package:netcfluttermvvm/widgets/snackbar_status.dart';
 
-// StoryDetailPage allows the user to view, edit, or delete a specific story
+/// View and edit details of a single story
 class StoryDetailPage extends ConsumerStatefulWidget {
   final int storyId;
+  final VoidCallback? onUpdated;
 
-  const StoryDetailPage({super.key, required this.storyId});
+  const StoryDetailPage({super.key, required this.storyId, this.onUpdated});
 
   @override
   ConsumerState<StoryDetailPage> createState() => _StoryDetailPageState();
@@ -29,56 +30,60 @@ class _StoryDetailPageState extends ConsumerState<StoryDetailPage> {
   late String priority;
   late String severity;
   late String itPhase;
-  File? _imageFile;
+
+  // Changed to handle multiple images
+  List<File> _imageFiles = [];
+  // Added Set to store indexes of selected images
+  final Set<int> _selectedIndexes = {};
 
   @override
   void initState() {
     super.initState();
 
-    // Retrieve the story from the provider using its ID
+    // Get the story by ID from the provider
     final data = ref.read(storyProvider.notifier).getById(widget.storyId);
     story = data!;
 
-    // Initialize text controllers with existing story values
+    // Initialize form field values from the story
     titleCtrl = TextEditingController(text: story.title);
     responsibleCtrl = TextEditingController(text: story.responsible);
     dateTime = null;
-
-    // Initialize dropdowns with existing values
     priority = story.priority;
     severity = story.severity;
     itPhase = story.itPhase;
+
+    // Added to ensure _imageFiles has the same image from story_model
+    _imageFiles = story.imagePaths.map((path) => File(path)).toList();
   }
 
-  // Updates the story using the current values from the form
+  /// Update story data and show success feedback
   void _update() {
-    // Added Validator if statement to check if all fields have values
     if (_formKey.currentState!.validate()) {
       final updated = story.copyWith(
         title: titleCtrl.text,
         responsible: responsibleCtrl.text,
-        dateTime: DateTime.now(), // ✅ Update to current time
+        dateTime: DateTime.now(),
         priority: priority,
         severity: severity,
         itPhase: itPhase,
-        imagePath: _imageFile?.path ?? story.imagePath,
+        imagePaths: _imageFiles.map((file) => file.path).toList(),
       );
-      // Snackbar to show updated
+
       showSuccessTopSnackBar(context, "Successfully Updated #${story.id}");
       ref.read(storyProvider.notifier).update(updated);
+      widget.onUpdated?.call(); // Added callback to scroll
       Navigator.pop(context);
     }
   }
 
-  // Deletes the story
+  /// Delete the story and show confirmation
   void _delete() {
     ref.read(storyProvider.notifier).delete(story.id);
-    //snackbar to show deleted
     showDeleteTopSnackBar(context, "Successfully Deleted #${story.id}");
-    Navigator.pop(context); // Close the page
+    Navigator.pop(context);
   }
 
-  // Opens date & time pickers to select a new datetime
+  /// DateTime picker handler for setting completion date
   void _pickDateTime() async {
     final d = await showDatePicker(
       context: context,
@@ -89,7 +94,6 @@ class _StoryDetailPageState extends ConsumerState<StoryDetailPage> {
     if (d == null) return;
 
     final t = await showTimePicker(
-      // ignore: use_build_context_synchronously
       context: context,
       initialTime: dateTime != null
           ? TimeOfDay.fromDateTime(dateTime!)
@@ -97,26 +101,44 @@ class _StoryDetailPageState extends ConsumerState<StoryDetailPage> {
     );
     if (t == null) return;
 
-    // Update local state with new datetime
     setState(() {
       dateTime = DateTime(d.year, d.month, d.day, t.hour, t.minute);
     });
   }
 
+  /// Image picker to choose a file from gallery
   Future<void> _pickImage() async {
     final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
-    if (pickedFile != null) {
+    final pickedFiles = await picker.pickMultiImage();
+
+    if (pickedFiles.isNotEmpty) {
       setState(() {
-        _imageFile = File(pickedFile.path);
+        _imageFiles.addAll(pickedFiles.map((xfile) => File(xfile.path)));
       });
     }
   }
 
+  // Added Delete Image function for X icon
+  void _deleteImage(int index) {
+    setState(() {
+      _imageFiles.removeAt(index);
+    });
+  }
+
+  // Added PreviewImage function for eye icon
+  void _previewImage(File file) {
+    showImageViewer(
+      context,
+      FileImage(file),
+      swipeDismissible: true,
+      doubleTapZoomable: true,
+    );
+  }
+
+  /// 🧱 UI layout starts here
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // App bar with story ID
       appBar: AppBar(title: Text("Story #${story.id}")),
       backgroundColor: Colors.white,
       body: Padding(
@@ -127,7 +149,7 @@ class _StoryDetailPageState extends ConsumerState<StoryDetailPage> {
             autovalidateMode: AutovalidateMode.onUserInteraction,
             child: Column(
               children: [
-                // Text field to edit the story title
+                // 📝 Title field
                 TextFormField(
                   controller: titleCtrl,
                   decoration: const InputDecoration(labelText: "Title"),
@@ -135,7 +157,7 @@ class _StoryDetailPageState extends ConsumerState<StoryDetailPage> {
                       (v == null || v.trim().isEmpty) ? "Required" : null,
                 ),
 
-                // Text field to edit the responsible person
+                // 👤 Responsible field
                 TextFormField(
                   controller: responsibleCtrl,
                   decoration: const InputDecoration(labelText: "Responsible"),
@@ -143,10 +165,10 @@ class _StoryDetailPageState extends ConsumerState<StoryDetailPage> {
                       (v == null || v.trim().isEmpty) ? "Required" : null,
                 ),
 
-                // Date/time picker button
+                // 📅 Completion Date Picker
                 Container(
-                  width: double.infinity, // Takes full width of the parent
-                  alignment: Alignment.centerLeft, // Align content to the left
+                  width: double.infinity,
+                  alignment: Alignment.centerLeft,
                   child: TextButton.icon(
                     onPressed: _pickDateTime,
                     icon: const Icon(Icons.schedule),
@@ -280,109 +302,199 @@ class _StoryDetailPageState extends ConsumerState<StoryDetailPage> {
                 ),
 
                 const SizedBox(height: 10),
-                // --- Story Image Picker below I/T Phase ---
-                const SizedBox(height: 10),
 
-                // Row with upload icon, file name, and preview icon
-                Row(
+                // Wrapped image preview portion in Column so it can be displayed as a list
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Upload icon
-                    IconButton(
-                      icon: const Icon(Icons.upload_file, size: 32),
-                      onPressed: _pickImage,
-                    ),
-
-                    // Show file name if image is picked
-                    if (_imageFile != null)
-                      Expanded(
-                        child: Text(
-                          _imageFile!.path.split('/').last, // Just the filename
-                          overflow: TextOverflow.ellipsis,
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.upload_file, size: 32),
+                              onPressed: _pickImage,
+                            ),
+                            const Text("Upload Images"),
+                          ],
                         ),
-                      )
-                    else if (story.imagePath.isNotEmpty)
-                      Expanded(
-                        child: Text(
-                          File(story.imagePath).path.split('/').last,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      )
-                    else
-                      const Expanded(child: Text("No image selected")),
-
-                    // Preview icon
-                    IconButton(
-                      icon: const Icon(Icons.image_search, size: 32),
-                      onPressed: () {
-                        final fileToPreview =
-                            _imageFile ??
-                            (story.imagePath.isNotEmpty
-                                ? File(story.imagePath)
-                                : null);
-                        if (fileToPreview != null) {
-                          showImageViewer(
-                            context,
-                            FileImage(fileToPreview),
-                            swipeDismissible: true,
-                            doubleTapZoomable: true,
-                          );
-                        } else {
-                          showNoImageSnackBar(context, "Upload an Image first");
-                        }
-                      },
+                        if (_imageFiles.isNotEmpty)
+                          Row(
+                            children: [
+                              if (_selectedIndexes.isNotEmpty)
+                                Text(
+                                  "${_selectedIndexes.length} selected",
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              const SizedBox(width: 8),
+                              TextButton(
+                                onPressed: () {
+                                  setState(() {
+                                    if (_selectedIndexes.length ==
+                                        _imageFiles.length) {
+                                      _selectedIndexes.clear(); // Deselect All
+                                    } else {
+                                      _selectedIndexes.addAll(
+                                        List.generate(
+                                          _imageFiles.length,
+                                          (i) => i,
+                                        ),
+                                      ); // Select All
+                                    }
+                                  });
+                                },
+                                child: Text(
+                                  _selectedIndexes.length == _imageFiles.length
+                                      ? "Deselect All"
+                                      : "Select All",
+                                  style: const TextStyle(color: Colors.blue),
+                                ),
+                              ),
+                              if (_selectedIndexes.isNotEmpty)
+                                const SizedBox(width: 8),
+                              if (_selectedIndexes.isNotEmpty)
+                                IconButton(
+                                  icon: const Icon(
+                                    Icons.delete_forever,
+                                    color: Colors.red,
+                                  ),
+                                  onPressed: () {
+                                    setState(() {
+                                      _imageFiles = _imageFiles
+                                          .asMap()
+                                          .entries
+                                          .where(
+                                            (e) => !_selectedIndexes.contains(
+                                              e.key,
+                                            ),
+                                          )
+                                          .map((e) => e.value)
+                                          .toList();
+                                      _selectedIndexes.clear();
+                                    });
+                                  },
+                                ),
+                            ],
+                          ),
+                      ],
                     ),
+                    const SizedBox(height: 8),
+
+                    if (_imageFiles.isNotEmpty)
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const SizedBox(height: 8),
+                          SizedBox(
+                            height: _imageFiles.length > 5 ? 200 : null,
+                            child: ListView.builder(
+                              shrinkWrap: true,
+                              physics: _imageFiles.length > 5
+                                  ? const ScrollPhysics()
+                                  : const NeverScrollableScrollPhysics(),
+                              itemCount: _imageFiles.length,
+                              itemBuilder: (context, index) {
+                                final file = _imageFiles[index];
+                                final filename = file.path.split('/').last;
+                                final isSelected = _selectedIndexes.contains(
+                                  index,
+                                );
+
+                                return GestureDetector(
+                                  onTap: () {
+                                    setState(() {
+                                      if (isSelected) {
+                                        _selectedIndexes.remove(index);
+                                      } else {
+                                        _selectedIndexes.add(index);
+                                      }
+                                    });
+                                  },
+                                  child: Container(
+                                    color: isSelected
+                                        ? Colors.grey.shade300
+                                        : Colors.transparent,
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 2,
+                                      horizontal: 4,
+                                    ),
+                                    child: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Expanded(
+                                          child: Text(
+                                            filename,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                        Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            IconButton(
+                                              onPressed: () =>
+                                                  _previewImage(file),
+                                              icon: const Icon(
+                                                Icons.remove_red_eye,
+                                              ),
+                                            ),
+                                            IconButton(
+                                              icon: const Icon(
+                                                Icons.close,
+                                                color: Colors.red,
+                                              ),
+                                              onPressed: () =>
+                                                  _deleteImage(index),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
                   ],
                 ),
 
                 const SizedBox(height: 20),
-                // Action buttons row: Update and Delete
+
+                // 💾 Update & 🗑 Delete buttons
                 Row(
                   children: [
-                    // Update button
                     ElevatedButton.icon(
                       onPressed: _update,
-                      icon: const Icon(
-                        Icons.save,
-                        color: Colors.green,
-                      ), // 🔴 Icon only
+                      icon: const Icon(Icons.save, color: Colors.green),
                       label: const Text("Update"),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors
-                            .white, // Optional: to match the "Update" style
-                        foregroundColor: Colors
-                            .black, // Optional: controls text/icon color unless overridden
-                        side: const BorderSide(
-                          color: Colors.green,
-                        ), // Optional: add border if you want emphasis
+                        backgroundColor: Colors.white,
+                        foregroundColor: Colors.black,
+                        side: const BorderSide(color: Colors.green),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(10),
                         ),
-                        elevation: 0, // Optional: flat style
+                        elevation: 0,
                       ),
                     ),
-
                     const SizedBox(width: 10),
-
-                    // Delete button
                     ElevatedButton.icon(
                       onPressed: _delete,
-                      icon: const Icon(
-                        Icons.delete,
-                        color: Colors.red,
-                      ), // 🔴 Icon only
+                      icon: const Icon(Icons.delete, color: Colors.red),
                       label: const Text("Delete"),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors
-                            .white, // Optional: to match the "Update" style
-                        foregroundColor: Colors
-                            .black, // Optional: controls text/icon color unless overridden
-                        side: const BorderSide(
-                          color: Colors.red,
-                        ), // Optional: add border if you want emphasis
+                        backgroundColor: Colors.white,
+                        foregroundColor: Colors.black,
+                        side: const BorderSide(color: Colors.red),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(10),
                         ),
-                        elevation: 0, // Optional: flat style
+                        elevation: 0,
                       ),
                     ),
                   ],

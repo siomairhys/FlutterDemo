@@ -22,14 +22,14 @@ class TabletListCard extends StatelessWidget {
       child: Table(
         defaultVerticalAlignment: TableCellVerticalAlignment.middle,
         columnWidths: const {
-          0: FlexColumnWidth(2),     // ID
+          0: FlexColumnWidth(1.5),     // ID
           1: FixedColumnWidth(100),   // Priority
           2: FixedColumnWidth(100),   // Severity
-          3: FixedColumnWidth(100),   // State
-          4: FlexColumnWidth(4),     // Title
+          3: FixedColumnWidth(95),   // State
+          4: FlexColumnWidth(3.0),     // Title
           5: FlexColumnWidth(1.5),     // Responsible
-          6: FlexColumnWidth(2),     // Modified On
-          7: FixedColumnWidth(90),   // Project
+          6: FlexColumnWidth(1.5),     // Modified On
+          7: FixedColumnWidth(95),   // Project
         },
         children: [
           TableRow(
@@ -53,7 +53,7 @@ class TabletListCard extends StatelessWidget {
                 story.title,
                 style: const TextStyle(
                   color: Colors.blue,
-                  decoration: TextDecoration.underline,
+                  // decoration: TextDecoration.underline,
                 ),
               ),
 
@@ -66,7 +66,7 @@ class TabletListCard extends StatelessWidget {
                   label: const Text("FORTREA"),
                   backgroundColor: Colors.purple,
                   labelStyle: const TextStyle(color: Colors.white),
-                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
                 ),
               ),
             ],

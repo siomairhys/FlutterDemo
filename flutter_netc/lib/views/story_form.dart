@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'snackbar_status.dart';
+import '../widgets/snackbar_status.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:netcfluttermvvm/models/story_model.dart';
 import 'package:netcfluttermvvm/viewmodels/story_provider.dart';
@@ -7,7 +7,14 @@ import 'package:dropdown_button2/dropdown_button2.dart';
 import 'package:netcfluttermvvm/Widgets/build_tag.dart'; // Make sure this import is present
 
 class StoryFormDialog extends ConsumerStatefulWidget {
-  const StoryFormDialog({super.key});
+  final Future<void> Function(Future<void> Function())? onSave;
+  final StoryModel? existingStory;
+
+  const StoryFormDialog({
+    super.key,
+    this.existingStory,
+    this.onSave,
+  });
 
   @override
   ConsumerState<StoryFormDialog> createState() => _StoryFormDialogState();
@@ -15,36 +22,64 @@ class StoryFormDialog extends ConsumerStatefulWidget {
 
 class _StoryFormDialogState extends ConsumerState<StoryFormDialog> {
   final _formKey = GlobalKey<FormState>();
-  final _titleCtrl = TextEditingController();
-  final _responsibleCtrl = TextEditingController();
-  String _priority = 'Medium';
-  String _severity = 'Medium';
-  String _itPhase = 'Analysis';
+  late TextEditingController _titleCtrl;
+  late TextEditingController _responsibleCtrl;
+  late String _priority;
+  late String _severity;
+  late String _itPhase;
+
+  @override
+  void initState() {
+    super.initState();
+
+    final s = widget.existingStory;
+
+    _titleCtrl = TextEditingController(text: s?.title ?? '');
+    _responsibleCtrl = TextEditingController(text: s?.responsible ?? '');
+    _priority = s?.priority ?? 'Medium';
+    _severity = s?.severity ?? 'Medium';
+    _itPhase = s?.itPhase ?? 'Analysis';
+  }
   
 
   // Submit the form and create the story with current DateTime
-  void _submit() {
-    if (_formKey.currentState!.validate()) {
-      final now = DateTime.now(); // Automatically assign current timestamp
-      final idStr = now.millisecondsSinceEpoch.toString();
-      final id = int.parse(idStr.substring(idStr.length - 10)); // Use last 10 digits for ID
+  void _submit() async {
+    if (!_formKey.currentState!.validate()) return;
 
-      ref.read(storyProvider.notifier).add(
-        StoryModel(
-          id: id,
-          title: _titleCtrl.text,
-          responsible: _responsibleCtrl.text,
-          dateTime: now,
-          priority: _priority,
-          severity: _severity,
-          itPhase: _itPhase,
-          imagePaths: [], // Changed to Empty List to handle multiple images
-        ),
-      );
-      showSuccessTopSnackBar(context, "Successfully Created #$id");
-      Navigator.pop(context);
+    final now = DateTime.now();
+    final idStr = now.millisecondsSinceEpoch.toString();
+    final id = int.parse(idStr.substring(idStr.length - 10));
+
+    final newStory = StoryModel(
+      id: widget.existingStory?.id ?? id,
+      title: _titleCtrl.text,
+      responsible: _responsibleCtrl.text,
+      dateTime: now,
+      priority: _priority,
+      severity: _severity,
+      itPhase: _itPhase,
+      imagePaths: [],
+    );
+
+    Future<void> saveAction() async {
+      if (widget.existingStory != null) {
+        ref.read(storyProvider.notifier).update(newStory);
+        showSuccessTopSnackBar(context, "Updated #${newStory.id}");
+      } else {
+        ref.read(storyProvider.notifier).add(newStory);
+        showSuccessTopSnackBar(context, "Created #${newStory.id}");
+      }
     }
+
+    if (widget.onSave != null) {
+      await widget.onSave!(saveAction);
+    } else {
+      await saveAction();
+    }
+
+    if (context.mounted) Navigator.pop(context);
   }
+
 
   @override
   Widget build(BuildContext context) {
