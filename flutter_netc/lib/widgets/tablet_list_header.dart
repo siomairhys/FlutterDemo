@@ -10,14 +10,14 @@ class TabletListHeader extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
       child: Table(
         columnWidths: const {
-          0: FlexColumnWidth(2),     // ID
+          0: FlexColumnWidth(1.5),     // ID
           1: FixedColumnWidth(100),   // Priority
           2: FixedColumnWidth(100),   // Severity
-          3: FixedColumnWidth(100),   // State
-          4: FlexColumnWidth(4),     // Title
+          3: FixedColumnWidth(95),   // State
+          4: FlexColumnWidth(3.0),     // Title
           5: FlexColumnWidth(1.5),     // Responsible
-          6: FlexColumnWidth(2),     // Modified On
-          7: FixedColumnWidth(90),   // Project
+          6: FlexColumnWidth(1.5),     // Modified On
+          7: FixedColumnWidth(95),   // Project
         },
         children: [
           TableRow(

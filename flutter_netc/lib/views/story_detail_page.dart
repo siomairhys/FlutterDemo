@@ -13,8 +13,9 @@ import 'package:netcfluttermvvm/widgets/snackbar_status.dart';
 /// View and edit details of a single story
 class StoryDetailPage extends ConsumerStatefulWidget {
   final int storyId;
+  final VoidCallback? onUpdated;
 
-  const StoryDetailPage({super.key, required this.storyId});
+  const StoryDetailPage({super.key, required this.storyId, this.onUpdated});
 
   @override
   ConsumerState<StoryDetailPage> createState() => _StoryDetailPageState();
@@ -32,6 +33,8 @@ class _StoryDetailPageState extends ConsumerState<StoryDetailPage> {
 
   // Changed to handle multiple images
   List<File> _imageFiles = [];
+  // Added Set to store indexes of selected images
+  final Set<int> _selectedIndexes = {};
 
   @override
   void initState() {
@@ -68,6 +71,7 @@ class _StoryDetailPageState extends ConsumerState<StoryDetailPage> {
 
       showSuccessTopSnackBar(context, "Successfully Updated #${story.id}");
       ref.read(storyProvider.notifier).update(updated);
+      widget.onUpdated?.call(); // Added callback to scroll
       Navigator.pop(context);
     }
   }
@@ -304,12 +308,77 @@ class _StoryDetailPageState extends ConsumerState<StoryDetailPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        IconButton(
-                          icon: const Icon(Icons.upload_file, size: 32),
-                          onPressed: _pickImage,
+                        Row(
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.upload_file, size: 32),
+                              onPressed: _pickImage,
+                            ),
+                            const Text("Upload Images"),
+                          ],
                         ),
-                        const Text("Upload Images"),
+                        if (_imageFiles.isNotEmpty)
+                          Row(
+                            children: [
+                              if (_selectedIndexes.isNotEmpty)
+                                Text(
+                                  "${_selectedIndexes.length} selected",
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              const SizedBox(width: 8),
+                              TextButton(
+                                onPressed: () {
+                                  setState(() {
+                                    if (_selectedIndexes.length ==
+                                        _imageFiles.length) {
+                                      _selectedIndexes.clear(); // Deselect All
+                                    } else {
+                                      _selectedIndexes.addAll(
+                                        List.generate(
+                                          _imageFiles.length,
+                                          (i) => i,
+                                        ),
+                                      ); // Select All
+                                    }
+                                  });
+                                },
+                                child: Text(
+                                  _selectedIndexes.length == _imageFiles.length
+                                      ? "Deselect All"
+                                      : "Select All",
+                                  style: const TextStyle(color: Colors.blue),
+                                ),
+                              ),
+                              if (_selectedIndexes.isNotEmpty)
+                                const SizedBox(width: 8),
+                              if (_selectedIndexes.isNotEmpty)
+                                IconButton(
+                                  icon: const Icon(
+                                    Icons.delete_forever,
+                                    color: Colors.red,
+                                  ),
+                                  onPressed: () {
+                                    setState(() {
+                                      _imageFiles = _imageFiles
+                                          .asMap()
+                                          .entries
+                                          .where(
+                                            (e) => !_selectedIndexes.contains(
+                                              e.key,
+                                            ),
+                                          )
+                                          .map((e) => e.value)
+                                          .toList();
+                                      _selectedIndexes.clear();
+                                    });
+                                  },
+                                ),
+                            ],
+                          ),
                       ],
                     ),
                     const SizedBox(height: 8),
@@ -330,43 +399,60 @@ class _StoryDetailPageState extends ConsumerState<StoryDetailPage> {
                               itemBuilder: (context, index) {
                                 final file = _imageFiles[index];
                                 final filename = file.path.split('/').last;
+                                final isSelected = _selectedIndexes.contains(
+                                  index,
+                                );
 
-                                return Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 2,
-                                  ),
-
-                                  child: Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Expanded(
-                                        child: Text(
-                                          filename,
-                                          overflow: TextOverflow.ellipsis,
+                                return GestureDetector(
+                                  onTap: () {
+                                    setState(() {
+                                      if (isSelected) {
+                                        _selectedIndexes.remove(index);
+                                      } else {
+                                        _selectedIndexes.add(index);
+                                      }
+                                    });
+                                  },
+                                  child: Container(
+                                    color: isSelected
+                                        ? Colors.grey.shade300
+                                        : Colors.transparent,
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 2,
+                                      horizontal: 4,
+                                    ),
+                                    child: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Expanded(
+                                          child: Text(
+                                            filename,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
                                         ),
-                                      ),
-                                      Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          IconButton(
-                                            onPressed: () =>
-                                                _previewImage(file),
-                                            icon: const Icon(
-                                              Icons.remove_red_eye,
+                                        Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            IconButton(
+                                              onPressed: () =>
+                                                  _previewImage(file),
+                                              icon: const Icon(
+                                                Icons.remove_red_eye,
+                                              ),
                                             ),
-                                          ),
-                                          IconButton(
-                                            icon: const Icon(
-                                              Icons.close,
-                                              color: Colors.red,
+                                            IconButton(
+                                              icon: const Icon(
+                                                Icons.close,
+                                                color: Colors.red,
+                                              ),
+                                              onPressed: () =>
+                                                  _deleteImage(index),
                                             ),
-                                            onPressed: () =>
-                                                _deleteImage(index),
-                                          ),
-                                        ],
-                                      ),
-                                    ],
+                                          ],
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                 );
                               },
@@ -374,42 +460,42 @@ class _StoryDetailPageState extends ConsumerState<StoryDetailPage> {
                           ),
                         ],
                       ),
+                  ],
+                ),
 
-                    const SizedBox(height: 20),
+                const SizedBox(height: 20),
 
-                    // 💾 Update & 🗑 Delete buttons
-                    Row(
-                      children: [
-                        ElevatedButton.icon(
-                          onPressed: _update,
-                          icon: const Icon(Icons.save, color: Colors.green),
-                          label: const Text("Update"),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.white,
-                            foregroundColor: Colors.black,
-                            side: const BorderSide(color: Colors.green),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            elevation: 0,
-                          ),
+                // 💾 Update & 🗑 Delete buttons
+                Row(
+                  children: [
+                    ElevatedButton.icon(
+                      onPressed: _update,
+                      icon: const Icon(Icons.save, color: Colors.green),
+                      label: const Text("Update"),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: Colors.black,
+                        side: const BorderSide(color: Colors.green),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
                         ),
-                        const SizedBox(width: 10),
-                        ElevatedButton.icon(
-                          onPressed: _delete,
-                          icon: const Icon(Icons.delete, color: Colors.red),
-                          label: const Text("Delete"),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.white,
-                            foregroundColor: Colors.black,
-                            side: const BorderSide(color: Colors.red),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            elevation: 0,
-                          ),
+                        elevation: 0,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    ElevatedButton.icon(
+                      onPressed: _delete,
+                      icon: const Icon(Icons.delete, color: Colors.red),
+                      label: const Text("Delete"),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: Colors.black,
+                        side: const BorderSide(color: Colors.red),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
                         ),
-                      ],
+                        elevation: 0,
+                      ),
                     ),
                   ],
                 ),
