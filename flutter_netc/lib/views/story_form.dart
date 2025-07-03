@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../widgets/snackbar_status.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:netcfluttermvvm/models/story_model.dart';
-import 'package:netcfluttermvvm/viewmodels/story_provider.dart';
+import 'package:netcfluttermvvm/viewmodels/story_provider_sqflite.dart';
 import 'package:dropdown_button2/dropdown_button2.dart';
 import 'package:netcfluttermvvm/Widgets/build_tag.dart'; // Make sure this import is present
 
@@ -10,11 +10,7 @@ class StoryFormDialog extends ConsumerStatefulWidget {
   final Future<void> Function(Future<void> Function())? onSave;
   final StoryModel? existingStory;
 
-  const StoryFormDialog({
-    super.key,
-    this.existingStory,
-    this.onSave,
-  });
+  const StoryFormDialog({super.key, this.existingStory, this.onSave});
 
   @override
   ConsumerState<StoryFormDialog> createState() => _StoryFormDialogState();
@@ -40,7 +36,6 @@ class _StoryFormDialogState extends ConsumerState<StoryFormDialog> {
     _severity = s?.severity ?? 'Medium';
     _itPhase = s?.itPhase ?? 'Analysis';
   }
-  
 
   // Submit the form and create the story with current DateTime
   void _submit() async {
@@ -80,7 +75,6 @@ class _StoryFormDialogState extends ConsumerState<StoryFormDialog> {
     if (context.mounted) Navigator.pop(context);
   }
 
-
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
@@ -98,7 +92,7 @@ class _StoryFormDialogState extends ConsumerState<StoryFormDialog> {
                 decoration: const InputDecoration(labelText: "Title"),
                 validator: (v) => v == null || v.isEmpty ? "Required" : null,
               ),
-          
+
               // Responsible input field
               TextFormField(
                 controller: _responsibleCtrl,
@@ -112,25 +106,29 @@ class _StoryFormDialogState extends ConsumerState<StoryFormDialog> {
                 decoration: const InputDecoration(labelText: 'Priority'),
                 isExpanded: true,
                 items: ['High', 'Medium', 'Low']
-                    .map((val) => DropdownMenuItem(
-                          value: val,
-                          child: Row(
-                            children: [
-                              buildTag('priority', val), // Colored tag
-                              const SizedBox(width: 8),
-                              Text(val),
-                            ],
-                          ),
-                        ))
-                    .toList(),
-                selectedItemBuilder: (context) => ['High', 'Medium', 'Low']
-                    .map((val) => Row(
+                    .map(
+                      (val) => DropdownMenuItem(
+                        value: val,
+                        child: Row(
                           children: [
-                            buildTag('priority', val), // Colored tag in the field
+                            buildTag('priority', val), // Colored tag
                             const SizedBox(width: 8),
                             Text(val),
                           ],
-                        ))
+                        ),
+                      ),
+                    )
+                    .toList(),
+                selectedItemBuilder: (context) => ['High', 'Medium', 'Low']
+                    .map(
+                      (val) => Row(
+                        children: [
+                          buildTag('priority', val), // Colored tag in the field
+                          const SizedBox(width: 8),
+                          Text(val),
+                        ],
+                      ),
+                    )
                     .toList(),
                 onChanged: (val) => setState(() => _priority = val!),
                 dropdownStyleData: DropdownStyleData(
@@ -138,32 +136,36 @@ class _StoryFormDialogState extends ConsumerState<StoryFormDialog> {
                   // direction: DropdownDirection.down,
                 ),
               ),
-          
+
               const SizedBox(height: 5),
               DropdownButtonFormField2<String>(
                 value: _severity,
                 decoration: const InputDecoration(labelText: 'Severity'),
                 isExpanded: true,
                 items: ['High', 'Medium', 'Low']
-                    .map((val) => DropdownMenuItem(
-                          value: val,
-                          child: Row(
-                            children: [
-                              buildTag('severity', val), // Colored tag
-                              const SizedBox(width: 8),
-                              Text(val),
-                            ],
-                          ),
-                        ))
-                    .toList(),
-                selectedItemBuilder: (context) => ['High', 'Medium', 'Low']
-                    .map((val) => Row(
+                    .map(
+                      (val) => DropdownMenuItem(
+                        value: val,
+                        child: Row(
                           children: [
-                            buildTag('severity', val), // Colored tag in the field
+                            buildTag('severity', val), // Colored tag
                             const SizedBox(width: 8),
                             Text(val),
                           ],
-                        ))
+                        ),
+                      ),
+                    )
+                    .toList(),
+                selectedItemBuilder: (context) => ['High', 'Medium', 'Low']
+                    .map(
+                      (val) => Row(
+                        children: [
+                          buildTag('severity', val), // Colored tag in the field
+                          const SizedBox(width: 8),
+                          Text(val),
+                        ],
+                      ),
+                    )
                     .toList(),
                 onChanged: (val) => setState(() => _severity = val!),
                 dropdownStyleData: DropdownStyleData(
@@ -178,31 +180,33 @@ class _StoryFormDialogState extends ConsumerState<StoryFormDialog> {
                 decoration: const InputDecoration(labelText: 'I/T Phase'),
                 isExpanded: true,
                 items: ['Analysis', 'Design', 'I/T']
-                    .map((val) => DropdownMenuItem(
-                          value: val,
-                          child: Row(
-                            children: [
-                              buildTag('itPhase', val),
-                              const SizedBox(width: 8),
-                              Text(val),
-                            ],
-                          ),
-                        ))
-                    .toList(),
-                selectedItemBuilder: (context) => ['Analysis', 'Design', 'I/T']
-                    .map((val) => Row(
+                    .map(
+                      (val) => DropdownMenuItem(
+                        value: val,
+                        child: Row(
                           children: [
                             buildTag('itPhase', val),
                             const SizedBox(width: 8),
                             Text(val),
                           ],
-                        ))
+                        ),
+                      ),
+                    )
+                    .toList(),
+                selectedItemBuilder: (context) => ['Analysis', 'Design', 'I/T']
+                    .map(
+                      (val) => Row(
+                        children: [
+                          buildTag('itPhase', val),
+                          const SizedBox(width: 8),
+                          Text(val),
+                        ],
+                      ),
+                    )
                     .toList(),
                 onChanged: (val) => setState(() => _itPhase = val!),
-                dropdownStyleData: DropdownStyleData(
-                  maxHeight: 200,
-                ),
-              ),              
+                dropdownStyleData: DropdownStyleData(maxHeight: 200),
+              ),
             ],
           ),
         ),
@@ -215,10 +219,7 @@ class _StoryFormDialogState extends ConsumerState<StoryFormDialog> {
         ),
 
         // Submit button
-        ElevatedButton(
-          onPressed: _submit,
-          child: const Text("Submit"),
-        ),
+        ElevatedButton(onPressed: _submit, child: const Text("Submit")),
       ],
     );
   }

@@ -5,10 +5,10 @@ import 'package:easy_image_viewer/easy_image_viewer.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import 'package:netcfluttermvvm/models/story_model.dart';
-import 'package:netcfluttermvvm/viewmodels/story_provider.dart';
-import 'package:netcfluttermvvm/widgets/build_tag.dart';
-import 'package:netcfluttermvvm/widgets/snackbar_status.dart';
+import '../models/story_model.dart';
+import '../viewmodels/story_provider_sqflite.dart';
+import '../widgets/build_tag.dart';
+import '../widgets/snackbar_status.dart';
 
 /// View and edit details of a single story
 class StoryDetailPage extends ConsumerStatefulWidget {
@@ -39,21 +39,34 @@ class _StoryDetailPageState extends ConsumerState<StoryDetailPage> {
   @override
   void initState() {
     super.initState();
+    _initializeStory();
+  }
 
-    // Get the story by ID from the provider
-    final data = ref.read(storyProvider.notifier).getById(widget.storyId);
-    story = data!;
+  Future<void> _initializeStory() async {
+    // Retrieve the story from the provider using its ID
+    final data = await ref.read(storyProvider.notifier).getById(widget.storyId);
+    if (data == null) {
+      // Handle the case where the story is not found
+      if (mounted) {
+        Navigator.pop(context);
+        showDeleteTopSnackBar(context, "Story not found");
+      }
+      return;
+    }
+    story = data;
 
-    // Initialize form field values from the story
+    // Initialize text controllers with existing story values
     titleCtrl = TextEditingController(text: story.title);
     responsibleCtrl = TextEditingController(text: story.responsible);
-    dateTime = null;
+    dateTime = story.dateTime;
+
+    // Initialize dropdowns with existing values
     priority = story.priority;
     severity = story.severity;
     itPhase = story.itPhase;
-
-    // Added to ensure _imageFiles has the same image from story_model
     _imageFiles = story.imagePaths.map((path) => File(path)).toList();
+
+    if (mounted) setState(() {});
   }
 
   /// Update story data and show success feedback
