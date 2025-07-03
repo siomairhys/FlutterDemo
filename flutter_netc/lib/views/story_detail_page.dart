@@ -29,7 +29,9 @@ class _StoryDetailPageState extends ConsumerState<StoryDetailPage> {
   late String priority;
   late String severity;
   late String itPhase;
-  File? _imageFile;
+
+  // Changed to handle multiple images
+  List<File> _imageFiles = [];
 
   @override
   void initState() {
@@ -46,6 +48,9 @@ class _StoryDetailPageState extends ConsumerState<StoryDetailPage> {
     priority = story.priority;
     severity = story.severity;
     itPhase = story.itPhase;
+
+    // Added to ensure _imageFiles has the same image from story_model
+    _imageFiles = story.imagePaths.map((path) => File(path)).toList();
   }
 
   /// Update story data and show success feedback
@@ -58,7 +63,7 @@ class _StoryDetailPageState extends ConsumerState<StoryDetailPage> {
         priority: priority,
         severity: severity,
         itPhase: itPhase,
-        imagePath: _imageFile?.path ?? story.imagePath,
+        imagePaths: _imageFiles.map((file) => file.path).toList(),
       );
 
       showSuccessTopSnackBar(context, "Successfully Updated #${story.id}");
@@ -100,54 +105,29 @@ class _StoryDetailPageState extends ConsumerState<StoryDetailPage> {
   /// Image picker to choose a file from gallery
   Future<void> _pickImage() async {
     final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
-    if (pickedFile != null) {
+    final pickedFiles = await picker.pickMultiImage();
+
+    if (pickedFiles.isNotEmpty) {
       setState(() {
-        _imageFile = File(pickedFile.path);
+        _imageFiles.addAll(pickedFiles.map((xfile) => File(xfile.path)));
       });
     }
   }
 
-  /// 🔁 Reusable dropdown field for Priority, Severity, and I/T Phase
-  Widget buildDropdownField({
-    required String label,
-    required String value,
-    required List<String> options,
-    required String tagType,
-    required void Function(String?) onChanged,
-  }) {
-    return Column(
-      children: [
-        const SizedBox(height: 5),
-        DropdownButtonFormField2<String>(
-          value: value,
-          decoration: InputDecoration(labelText: label),
-          isExpanded: true,
-          items: options.map((val) {
-            return DropdownMenuItem(
-              value: val,
-              child: Row(
-                children: [
-                  buildTag(tagType, val),
-                  const SizedBox(width: 8),
-                  Text(val),
-                ],
-              ),
-            );
-          }).toList(),
-          selectedItemBuilder: (context) => options.map((val) {
-            return Row(
-              children: [
-                buildTag(tagType, val),
-                const SizedBox(width: 8),
-                Text(val),
-              ],
-            );
-          }).toList(),
-          onChanged: onChanged,
-          dropdownStyleData: const DropdownStyleData(maxHeight: 200),
-        ),
-      ],
+  // Added Delete Image function for X icon
+  void _deleteImage(int index) {
+    setState(() {
+      _imageFiles.removeAt(index);
+    });
+  }
+
+  // Added PreviewImage function for eye icon
+  void _previewImage(File file) {
+    showImageViewer(
+      context,
+      FileImage(file),
+      swipeDismissible: true,
+      doubleTapZoomable: true,
     );
   }
 
@@ -196,71 +176,180 @@ class _StoryDetailPageState extends ConsumerState<StoryDetailPage> {
                   ),
                 ),
 
-                // 🔽 Priority Dropdown
-                buildDropdownField(
-                  label: 'Priority',
+                const SizedBox(height: 5),
+                DropdownButtonFormField2<String>(
                   value: priority,
-                  options: ['High', 'Medium', 'Low'],
-                  tagType: 'priority',
+                  decoration: const InputDecoration(labelText: 'Priority'),
+                  isExpanded: true, // Ensures dropdown takes full width
+                  items: ['High', 'Medium', 'Low']
+                      .map(
+                        (val) => DropdownMenuItem(
+                          value: val,
+                          child: Row(
+                            children: [
+                              buildTag('priority', val), // Colored tag
+                              const SizedBox(width: 8),
+                              Text(val),
+                            ],
+                          ),
+                        ),
+                      )
+                      .toList(),
+                  selectedItemBuilder: (context) => ['High', 'Medium', 'Low']
+                      .map(
+                        (val) => Row(
+                          children: [
+                            buildTag(
+                              'priority',
+                              val,
+                            ), // Colored tag in the field
+                            const SizedBox(width: 8),
+                            Text(val),
+                          ],
+                        ),
+                      )
+                      .toList(),
                   onChanged: (val) => setState(() => priority = val!),
+                  dropdownStyleData: DropdownStyleData(
+                    maxHeight: 200, // Limit dropdown height
+                    // You can further customize here
+                  ),
                 ),
 
-                // 🔽 Severity Dropdown
-                buildDropdownField(
-                  label: 'Severity',
+                const SizedBox(height: 5),
+                DropdownButtonFormField2<String>(
                   value: severity,
-                  options: ['High', 'Medium', 'Low'],
-                  tagType: 'severity',
+                  decoration: const InputDecoration(labelText: 'Severity'),
+                  isExpanded: true, // Ensures dropdown takes full width
+                  items: ['High', 'Medium', 'Low']
+                      .map(
+                        (val) => DropdownMenuItem(
+                          value: val,
+                          child: Row(
+                            children: [
+                              buildTag('severity', val), // Colored tag
+                              const SizedBox(width: 8),
+                              Text(val),
+                            ],
+                          ),
+                        ),
+                      )
+                      .toList(),
+                  selectedItemBuilder: (context) => ['High', 'Medium', 'Low']
+                      .map(
+                        (val) => Row(
+                          children: [
+                            buildTag(
+                              'severity',
+                              val,
+                            ), // Colored tag in the field
+                            const SizedBox(width: 8),
+                            Text(val),
+                          ],
+                        ),
+                      )
+                      .toList(),
                   onChanged: (val) => setState(() => severity = val!),
+                  dropdownStyleData: DropdownStyleData(
+                    maxHeight: 200, // Limit dropdown height
+                    // You can further customize here
+                  ),
                 ),
 
-                // 🔽 I/T Phase Dropdown
-                buildDropdownField(
-                  label: 'I/T Phase',
+                const SizedBox(height: 5),
+                DropdownButtonFormField2<String>(
                   value: itPhase,
-                  options: ['Analysis', 'Design', 'I/T'],
-                  tagType: 'itPhase',
+                  decoration: const InputDecoration(labelText: 'I/T Phase'),
+                  isExpanded: true, // Ensures dropdown takes full width
+                  items: ['Analysis', 'Design', 'I/T']
+                      .map(
+                        (val) => DropdownMenuItem(
+                          value: val,
+                          child: Row(
+                            children: [
+                              buildTag('itPhase', val), // Colored tag
+                              const SizedBox(width: 8),
+                              Text(val),
+                            ],
+                          ),
+                        ),
+                      )
+                      .toList(),
+                  selectedItemBuilder: (context) =>
+                      ['Analysis', 'Design', 'I/T']
+                          .map(
+                            (val) => Row(
+                              children: [
+                                buildTag(
+                                  'itPhase',
+                                  val,
+                                ), // Colored tag in the field
+                                const SizedBox(width: 8),
+                                Text(val),
+                              ],
+                            ),
+                          )
+                          .toList(),
                   onChanged: (val) => setState(() => itPhase = val!),
+                  dropdownStyleData: DropdownStyleData(
+                    maxHeight: 200, // Limit dropdown height
+                    // You can further customize here
+                  ),
                 ),
 
                 const SizedBox(height: 10),
 
-                // 🖼 Image Upload and Preview
-                Row(
+                // 🖼 Image Upload and Preview (Multi-image support)
+                // Wrapped image preview portion in Column so it can be displayed as a list
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    IconButton(
-                      icon: const Icon(Icons.upload_file, size: 32),
-                      onPressed: _pickImage,
+                    Row(
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.upload_file, size: 32),
+                          onPressed: _pickImage,
+                        ),
+                        const Text("Upload Images"),
+                      ],
                     ),
-                    Expanded(
-                      child: Text(
-                        _imageFile?.path.split('/').last ??
-                            (story.imagePath.isNotEmpty
-                                ? File(story.imagePath).path.split('/').last
-                                : "No image selected"),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.image_search, size: 32),
-                      onPressed: () {
-                        final fileToPreview =
-                            _imageFile ??
-                            (story.imagePath.isNotEmpty
-                                ? File(story.imagePath)
-                                : null);
-                        if (fileToPreview != null) {
-                          showImageViewer(
-                            context,
-                            FileImage(fileToPreview),
-                            swipeDismissible: true,
-                            doubleTapZoomable: true,
-                          );
-                        } else {
-                          showNoImageSnackBar(context, "Upload an Image first");
-                        }
-                      },
-                    ),
+                    const SizedBox(height: 8),
+                    ..._imageFiles.asMap().entries.map((entry) {
+                      final index = entry.key;
+                      final file = entry.value;
+                      final filename = file.path.split('/').last;
+
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 2),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(
+                              child: Text(
+                                filename,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                IconButton(
+                                  icon: const Icon(Icons.remove_red_eye),
+                                  onPressed: () => _previewImage(file),
+                                ),
+                                IconButton(
+                                  icon: const Icon(
+                                    Icons.close,
+                                    color: Colors.red,
+                                  ),
+                                  onPressed: () => _deleteImage(index),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      );
+                    }),
                   ],
                 ),
 

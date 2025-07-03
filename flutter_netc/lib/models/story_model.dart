@@ -7,7 +7,7 @@ class StoryModel {
   final String priority;
   final String severity; 
   final String itPhase;
-  final String imagePath; // Optional field for image path
+  final List<String> imagePaths; // Changed to a list to handle multiple images
 
   // Constructor to initialize all required fields
   StoryModel({
@@ -18,7 +18,7 @@ class StoryModel {
     this.priority = 'Medium',
     this.severity = 'Medium',
     this.itPhase = 'Analysis',
-    required this.imagePath,
+    required this.imagePaths,
   });
 
   // Creates a copy of the current instance with optional modifications
@@ -30,7 +30,7 @@ class StoryModel {
     String? priority,
     String? severity,
     String? itPhase,
-    String? imagePath,
+    List<String>? imagePaths,
   }) {
     return StoryModel(
       id: id ?? this.id,
@@ -40,7 +40,7 @@ class StoryModel {
       priority: priority ?? this.priority,
       severity: severity ?? this.severity,
       itPhase: itPhase ?? this.itPhase,
-      imagePath: imagePath ?? this.imagePath,
+      imagePaths: imagePaths ?? this.imagePaths,
     );
   }
 }
