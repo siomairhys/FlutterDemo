@@ -299,7 +299,6 @@ class _StoryDetailPageState extends ConsumerState<StoryDetailPage> {
 
                 const SizedBox(height: 10),
 
-                // 🖼 Image Upload and Preview (Multi-image support)
                 // Wrapped image preview portion in Column so it can be displayed as a list
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -314,78 +313,103 @@ class _StoryDetailPageState extends ConsumerState<StoryDetailPage> {
                       ],
                     ),
                     const SizedBox(height: 8),
-                    ..._imageFiles.asMap().entries.map((entry) {
-                      final index = entry.key;
-                      final file = entry.value;
-                      final filename = file.path.split('/').last;
 
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 2),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Expanded(
-                              child: Text(
-                                filename,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                IconButton(
-                                  icon: const Icon(Icons.remove_red_eye),
-                                  onPressed: () => _previewImage(file),
-                                ),
-                                IconButton(
-                                  icon: const Icon(
-                                    Icons.close,
-                                    color: Colors.red,
+                    if (_imageFiles.isNotEmpty)
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const SizedBox(height: 8),
+                          SizedBox(
+                            height: _imageFiles.length > 5 ? 200 : null,
+                            child: ListView.builder(
+                              shrinkWrap: true,
+                              physics: _imageFiles.length > 5
+                                  ? const ScrollPhysics()
+                                  : const NeverScrollableScrollPhysics(),
+                              itemCount: _imageFiles.length,
+                              itemBuilder: (context, index) {
+                                final file = _imageFiles[index];
+                                final filename = file.path.split('/').last;
+
+                                return Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 2,
                                   ),
-                                  onPressed: () => _deleteImage(index),
-                                ),
-                              ],
+
+                                  child: Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          filename,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                      Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          IconButton(
+                                            onPressed: () =>
+                                                _previewImage(file),
+                                            icon: const Icon(
+                                              Icons.remove_red_eye,
+                                            ),
+                                          ),
+                                          IconButton(
+                                            icon: const Icon(
+                                              Icons.close,
+                                              color: Colors.red,
+                                            ),
+                                            onPressed: () =>
+                                                _deleteImage(index),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              },
                             ),
-                          ],
-                        ),
-                      );
-                    }),
-                  ],
-                ),
-
-                const SizedBox(height: 20),
-
-                // 💾 Update & 🗑 Delete buttons
-                Row(
-                  children: [
-                    ElevatedButton.icon(
-                      onPressed: _update,
-                      icon: const Icon(Icons.save, color: Colors.green),
-                      label: const Text("Update"),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        foregroundColor: Colors.black,
-                        side: const BorderSide(color: Colors.green),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        elevation: 0,
+                          ),
+                        ],
                       ),
-                    ),
-                    const SizedBox(width: 10),
-                    ElevatedButton.icon(
-                      onPressed: _delete,
-                      icon: const Icon(Icons.delete, color: Colors.red),
-                      label: const Text("Delete"),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        foregroundColor: Colors.black,
-                        side: const BorderSide(color: Colors.red),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
+
+                    const SizedBox(height: 20),
+
+                    // 💾 Update & 🗑 Delete buttons
+                    Row(
+                      children: [
+                        ElevatedButton.icon(
+                          onPressed: _update,
+                          icon: const Icon(Icons.save, color: Colors.green),
+                          label: const Text("Update"),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.white,
+                            foregroundColor: Colors.black,
+                            side: const BorderSide(color: Colors.green),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            elevation: 0,
+                          ),
                         ),
-                        elevation: 0,
-                      ),
+                        const SizedBox(width: 10),
+                        ElevatedButton.icon(
+                          onPressed: _delete,
+                          icon: const Icon(Icons.delete, color: Colors.red),
+                          label: const Text("Delete"),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.white,
+                            foregroundColor: Colors.black,
+                            side: const BorderSide(color: Colors.red),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            elevation: 0,
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
