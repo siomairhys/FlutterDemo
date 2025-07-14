@@ -2,13 +2,13 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../widgets/app_bar.dart';
-import '../widgets/tablet_list_header.dart';
-import '../viewmodels/story_provider_sqflite.dart';
+import 'package:netcfluttermvvm/widgets/app_bar.dart';
+import 'package:netcfluttermvvm/widgets/tablet_list_header.dart';
+import '../viewmodels/story_provider.dart';
 import 'story_detail_page.dart';
 import 'story_form.dart';
 import '../widgets/mobile_list_card.dart';
-import '../widgets/tablet_list_card.dart';
+import 'package:netcfluttermvvm/widgets/tablet_list_card.dart';
 import '../responsive/responsive_layout.dart';
 
 class StoryPage extends ConsumerStatefulWidget {
@@ -62,12 +62,10 @@ class _StoryPageState extends ConsumerState<StoryPage> {
           return InkWell(
             onTap: () => Navigator.push(
               context,
-              MaterialPageRoute(
-                builder: (_) => StoryDetailPage(
-                  storyId: story.id,
-                  onUpdated: _scrollToTop, // ✅ pass scroll callback
-                ),
-              ),
+              MaterialPageRoute(builder: (_) => StoryDetailPage(
+                storyId: story.id, 
+                onUpdated: _scrollToTop, // ✅ pass scroll callback
+              )),
             ),
             child: ResponsiveLayout(
               mobileBody: MobileListCard(story),
@@ -85,8 +83,7 @@ class _StoryPageState extends ConsumerState<StoryPage> {
               showDialog(
                 context: context,
                 barrierDismissible: false,
-                builder: (_) =>
-                    const Center(child: CircularProgressIndicator()),
+                builder: (_) => const Center(child: CircularProgressIndicator()),
               );
               await callback();
               if (context.mounted) Navigator.of(context).pop(); // close loading
@@ -97,6 +94,8 @@ class _StoryPageState extends ConsumerState<StoryPage> {
         backgroundColor: Colors.black,
         child: const Icon(Icons.add, color: Colors.white),
       ),
+
+
     );
   }
 }
